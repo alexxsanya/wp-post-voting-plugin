@@ -42,6 +42,7 @@
         $new_vote_count = $vote_count + 1;
 
         $vote = update_post_meta($_REQUEST["post_id"], "votes", $new_vote_count);
+        $user = update_user_meta(get_current_user_id(), "voted", true);
 
         if($vote === false) {
             $result['type'] = "error";
@@ -69,6 +70,15 @@
         die();
     }
 
+    function voter_status() {
+        // checks if a voter status to ensure voter votes only once
+        $user_id = get_current_user_id();
+
+        $voter_status = get_user_meta($user_id, "voted", true);
+    
+        return $voter_status;
+    }
+
     add_action( 'init', 'my_script_enqueuer' );
 
     function my_script_enqueuer() {
@@ -85,12 +95,15 @@
         $votes = get_post_meta($post->ID, "votes", true);
         
         $votes = ($votes == "") ? 0 : $votes;
-        echo "<div id='vote_counter'>This post has <span>$votes</span> votes</div>";
+        echo "<div id='vote_counter'>This post has <span class='badge badge-primary'>$votes</span> votes</div>";
 
         $nonce = wp_create_nonce("my_user_vote_nonce");
-        $link = admin_url('admin-ajax.php?action=my_user_vote&post_id='.$post->ID.'&nonce='.$nonce);
-        echo '<a class="user_vote btn btn-warning" data-nonce="' . $nonce . '" data-post_id="' . $post->ID . '" href="' . $link . '">vote for this article</a>';
-
+        if(!voter_status()) {
+            $link = admin_url('admin-ajax.php?action=my_user_vote&post_id='.$post->ID.'&nonce='.$nonce);
+            echo '<a class="user_vote btn btn-warning" data-nonce="' . $nonce . '" data-post_id="' . $post->ID . '" href="' . $link . '">vote for this article</a>';
+        }else {
+            echo '<small>You already voted</small>';
+        }
     } 
 
     function register_shortcode(){
